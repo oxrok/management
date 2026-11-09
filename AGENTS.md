@@ -12,10 +12,15 @@ issue attachment, a release asset or a test fixture. That covers FX2
 firmware, FPGA bitstreams, `.ccf`/`.rbf`/`.fw`/`.bitstream` files, vendor
 installers and anything extracted from them, whole or in part.
 
-The only exception is written permission from that specific vendor for
-that specific firmware. Permission from one vendor does not cover
-another, and a redistributable-looking licence file inside the vendor's
-package is not permission; ask the user.
+The one place vendor firmware is stored is
+[oxrok/oxrok-firmware](https://github.com/oxrok/oxrok-firmware),
+inherited from sigrok-firmware, and only firmware whose vendor has
+allowed its distribution. Adding a file there needs written permission
+from that specific vendor for that specific firmware, recorded with it
+(the way sigrok-firmware keeps each vendor's licence or permission next
+to its files), and the user's go-ahead. Permission from one vendor does
+not cover another, and a redistributable-looking licence file inside the
+vendor's own package is not permission by itself; ask the user.
 
 What we do instead: ship extractors that fetch or read the vendor's own
 download on the user's machine, and keep extracted files in scratch
@@ -96,8 +101,8 @@ for oxrok goes in `decisions.toml`, not on the board.
   closed before `closed_since`.
 - Licence: oxrok is GPL-3.0-or-later. GPL, LGPL and permissive sources
   are fine; note provenance in oxrok's `docs/LICENSING.md` when porting.
-  Vendor firmware is never committed or shipped; see "Never commit vendor
-  firmware" above.
+  Vendor firmware goes only to oxrok-firmware, and only with the
+  vendor's written permission; see "Never commit vendor firmware" above.
 
 ## When work lands
 
