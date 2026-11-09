@@ -22,13 +22,13 @@ Needs the gh CLI, logged in with the `project` scope.
 import argparse
 import json
 import re
-import subprocess
 import sys
 import tomllib
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
-CONFIG = ROOT / "config.toml"
+from ghlib import CONFIG, ROOT, die, gh, load_config
+from ghlib import Project as _Project
+
 DECISIONS = ROOT / "decisions.toml"
 SEED = ROOT / "seed.toml"
 
@@ -50,23 +50,6 @@ STATUS_HELP = {
     "Done": "Landed in the target repo",
     "Won't do": "Decided against after triage; reason in the issue",
 }
-
-
-def die(msg):
-    print(msg, file=sys.stderr)
-    sys.exit(1)
-
-
-def gh(*args, json_out=False, stdin=None):
-    r = subprocess.run(["gh", *args], capture_output=True, text=True, input=stdin)
-    if r.returncode != 0:
-        die("gh %s failed:\n%s" % (" ".join(args), r.stderr.strip()))
-    return json.loads(r.stdout) if json_out else r.stdout
-
-
-def load_config():
-    with CONFIG.open("rb") as f:
-        return tomllib.load(f)
 
 
 def save_project_number(number):
@@ -92,44 +75,10 @@ def short_of(url):
 
 # --- project ---------------------------------------------------------------
 
-class Project:
+class Project(_Project):
     def __init__(self, cfg):
         self.cfg = cfg
-        self.owner = cfg["owner"]
-        self.number = cfg["project_number"]
-        if not self.number:
-            die("no project yet: run `tools/track.py setup`")
-        view = gh("project", "view", str(self.number), "--owner", self.owner,
-                  "--format", "json", json_out=True)
-        self.id = view["id"]
-        self.url = view["url"]
-        self.fields = {}
-        for f in gh("project", "field-list", str(self.number), "--owner", self.owner,
-                    "--format", "json", "--limit", "100", json_out=True)["fields"]:
-            self.fields[f["name"]] = f
-
-    def option(self, field, name):
-        for o in self.fields[field].get("options", []):
-            if o["name"] == name:
-                return o["id"]
-        die("field %s has no option %r" % (field, name))
-
-    def add(self, issue_url):
-        return gh("project", "item-add", str(self.number), "--owner", self.owner,
-                  "--url", issue_url, "--format", "json", json_out=True)["id"]
-
-    def set_select(self, item_id, field, value):
-        gh("project", "item-edit", "--id", item_id, "--project-id", self.id,
-           "--field-id", self.fields[field]["id"],
-           "--single-select-option-id", self.option(field, value))
-
-    def set_text(self, item_id, field, value):
-        gh("project", "item-edit", "--id", item_id, "--project-id", self.id,
-           "--field-id", self.fields[field]["id"], "--text", value)
-
-    def items(self):
-        return gh("project", "item-list", str(self.number), "--owner", self.owner,
-                  "--format", "json", "--limit", "1000", json_out=True)["items"]
+        super().__init__(cfg["owner"], cfg["project_number"])
 
 
 # --- tracked and decided ---------------------------------------------------
@@ -189,10 +138,7 @@ def cmd_setup(cfg, args):
         "Upstream repo": [u["repo"].split("/")[1] for u in cfg["upstream"]],
     }
     for name, options in wanted.items():
-        if name not in proj.fields:
-            gh("project", "field-create", str(number), "--owner", cfg["owner"],
-               "--name", name, "--data-type", "SINGLE_SELECT",
-               "--single-select-options", ",".join(options))
+        if proj.ensure_select_field(name, options):
             print("created field %s" % name)
     if "Upstream PR" not in proj.fields:
         gh("project", "field-create", str(number), "--owner", cfg["owner"],
@@ -200,16 +146,7 @@ def cmd_setup(cfg, args):
         print("created field Upstream PR")
 
     # Status is built in; replace its options with ours.
-    status = proj.fields["Status"]
-    have = [o["name"] for o in status.get("options", [])]
-    if have != cfg["statuses"]:
-        opts = [{"name": s, "color": STATUS_COLORS.get(s, "GRAY"),
-                 "description": STATUS_HELP.get(s, "")} for s in cfg["statuses"]]
-        query = """mutation($f: ID!, $o: [ProjectV2SingleSelectFieldOptionInput!]) {
-          updateProjectV2Field(input: {fieldId: $f, singleSelectOptions: $o}) {
-            projectV2Field { ... on ProjectV2SingleSelectField { id } } } }"""
-        gh("api", "graphql", "--input", "-",
-           stdin=json.dumps({"query": query, "variables": {"f": status["id"], "o": opts}}))
+    if proj.set_status_options(cfg["statuses"], STATUS_COLORS, STATUS_HELP):
         print("set Status options: %s" % ", ".join(cfg["statuses"]))
     print("project: %s" % Project(cfg).url)
 

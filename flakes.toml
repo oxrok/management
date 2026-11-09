@@ -1,0 +1,2 @@
+# Known CI flakes, kept by tools/ci.py flake. A flake is a failure that
+# passed on a rerun with no change; its signature is ci.py's cluster key.
