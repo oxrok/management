@@ -12,9 +12,9 @@ target = "oxrok/oxrok-util"
 status = "In progress"
 upstream = ["sigrokproject/sigrok-util#22"]
 notes = """
-`sigrok-fwextract-intronix-logicport`: gets LogicPort.ccf from an installed copy, the vendor installer, or a download (`-d`), and saves it as `intronix-logicport.ccf`. Cherry-picked onto oxrok-util master (f178d3a), not pushed yet.
+`sigrok-fwextract-intronix-logicport`: gets LogicPort.ccf from an installed copy, the vendor installer, or a download (`-d`), and saves it as `intronix-logicport.ccf`. On oxrok-util master (f178d3a).
 
-- [ ] Push to oxrok-util
+- [x] Push to oxrok-util
 - [ ] Run once against the vendor installer
 - [ ] oxrok docs point to oxrok-util (docs/DEVICES.md, src/drivers/logicport/mod.rs)
 """
@@ -26,9 +26,9 @@ target = "oxrok/oxrok-util"
 status = "In progress"
 upstream = ["sigrokproject/sigrok-util#21"]
 notes = """
-Locates the Qt resource tables by content when the ELF symbols are missing, so the Mach-O and PE builds work. Cherry-picked onto oxrok-util master (5f6746e), not pushed yet. The author tested macOS only; the ELF path is unchanged but untested.
+Locates the Qt resource tables by content when the ELF symbols are missing, so the Mach-O and PE builds work. On oxrok-util master (5f6746e). The author tested macOS only; the ELF path is unchanged but untested.
 
-- [ ] Push to oxrok-util
+- [x] Push to oxrok-util
 - [ ] Run against a Linux KingstVIS binary and compare the manpage checksums
 """
 
