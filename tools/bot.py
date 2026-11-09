@@ -92,6 +92,37 @@ def body_of(args):
     return args.body
 
 
+MANIFEST = {
+    "name": "oxrok-bot",
+    "url": "https://github.com/oxrok/management",
+    "description": "Opens the draft pull requests and issues that oxrok's maintenance "
+                   "tools prepare, so a person reviews them. See oxrok/management.",
+    "hook_attributes": {"active": False},
+    "redirect_url": "https://oxrok.dev/",
+    "public": False,
+    "default_permissions": {"contents": "write", "pull_requests": "write",
+                            "issues": "write", "metadata": "read"},
+    "default_events": [],
+}
+
+
+def cmd_manifest(args):
+    """The App manifest, for GitHub's create-from-manifest form."""
+    print(json.dumps(MANIFEST, indent=1))
+
+
+def cmd_convert(args):
+    """Exchange the code GitHub redirects with for the App's id and key, and save them."""
+    r = gh("api", "-X", "POST", "/app-manifests/%s/conversions" % args.code, json_out=True)
+    BOT_DIR.mkdir(parents=True, exist_ok=True, mode=0o700)
+    (BOT_DIR / "app-id").write_text("%d\n" % r["id"])
+    pem = BOT_DIR / "key.pem"
+    pem.write_text(r["pem"])
+    pem.chmod(0o600)
+    print("saved app id %d (%s) and its key under %s" % (r["id"], r["slug"], BOT_DIR))
+    print("now install it on the org: %s/installations/new" % r["html_url"])
+
+
 def cmd_token(args):
     print(token())
 
@@ -156,6 +187,9 @@ def main():
     sub = ap.add_subparsers(dest="cmd", required=True)
     sub.add_parser("token")
     sub.add_parser("whoami")
+    sub.add_parser("manifest")
+    p = sub.add_parser("convert")
+    p.add_argument("code")
     p = sub.add_parser("push")
     p.add_argument("dir")
     p.add_argument("branch")
@@ -178,7 +212,8 @@ def main():
             p.add_argument("number", type=int)
     args = ap.parse_args()
     {"token": cmd_token, "whoami": cmd_whoami, "push": cmd_push, "pr": cmd_pr,
-     "issue": cmd_issue, "comment": cmd_comment}[args.cmd](args)
+     "issue": cmd_issue, "comment": cmd_comment, "manifest": cmd_manifest,
+     "convert": cmd_convert}[args.cmd](args)
 
 
 if __name__ == "__main__":
