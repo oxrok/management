@@ -25,7 +25,70 @@ workstreams = [
 ]
 targets = ["oxrok/oxrok", "oxrok/oxrok-util", "oxrok/firmware-fx2lafw"]
 
+# The "Maintenance" project (org project #2). Set by `tools/board.py setup`.
+maintenance_project_number = 2
+areas = ["ci", "docs", "deps", "security", "release"]
+
 # Tables below this point: plain keys after them would belong to the last table.
+
+# The org's repositories the maintenance tools work on. `path` is the local
+# checkout, relative to this repo or absolute; `ci` the workflow whose runs
+# ci.py reads; `checks` the job names the main-branch ruleset requires
+# (tools/rulesets.py), as they appear on a pull request.
+[[repo]]
+name = "oxrok/oxrok"
+path = "../../oxrok"
+ci = "CI"
+checks = [
+  "fmt and clippy",
+  "licenses",
+  "msrv",
+  "test (ubuntu-latest)",
+  "test (macos-latest)",
+  "test (windows-latest)",
+  "changes",
+  "python decoders (python 1/3)",
+  "python decoders (python 2/3)",
+  "python decoders (python 3/3)",
+  "python decoders (rustpython 1/2)",
+  "python decoders (rustpython 2/2)",
+  "python decoders (clippy)",
+]
+
+[[repo]]
+name = "oxrok/oxrok-ui"
+path = "../../ui"
+ci = "CI"
+checks = [
+  "check (ubuntu-latest)",
+  "check (macos-latest)",
+  "check (windows-latest)",
+  "oxrok (ubuntu-latest)",
+  "oxrok (macos-latest)",
+]
+
+[[repo]]
+name = "oxrok/oxrok-website"
+path = "../../website"
+ci = "Build and deploy"
+checks = ["build"]
+
+[[repo]]
+name = "oxrok/vusb"
+path = "../../vusb"
+ci = "CI"
+checks = [
+  "check (ubuntu-latest)",
+  "check (macos-latest)",
+  "check (windows-latest)",
+  "licenses",
+]
+
+[[repo]]
+name = "oxrok/management"
+path = "."
+ci = "check"
+checks = ["check"]
 
 # Upstream repos watched by intake, and where their work usually lands.
 [[upstream]]

@@ -1,8 +1,15 @@
 # AGENTS.md
 
-This repo manages how oxrok takes in work from upstream sigrok: which
-upstream pull requests are worth porting, where each one stands, and the
-tools and skills that keep that current. It holds no oxrok code.
+This repo is the oxrok org's maintenance hub. It holds no oxrok code. Two
+things live here:
+
+- **Upstream intake**: which upstream sigrok pull requests are worth
+  porting, where each one stands, and the tools and skills that keep that
+  current (the rest of this file).
+- **Maintenance**: the tools, skills and rules for keeping the org's repos
+  healthy (CI, status prose, dependencies, branch rules), and the policy
+  for what an agent may read and write while doing so (the "Maintenance"
+  section at the end, and `docs/AGENT-POLICY.md`).
 
 ## Never commit vendor firmware
 
@@ -115,3 +122,48 @@ items, so it usually needs no edit for one item.
 
 `.claude/skills/upstream-intake` and `.claude/skills/upstream-progress`
 hold the step-by-step procedures. Use them.
+
+## Maintenance
+
+The repos: `oxrok`, `oxrok-ui`, `oxrok-website`, `vusb` and this one, as
+`[[repo]]` tables in `config.toml` with their local checkout paths, CI
+workflow names and the checks main requires. The board: the org project
+"Maintenance" (`maintenance_project_number`), with Status, Area and
+Target repo. Labels: `maintenance` and `area:<ci|docs|deps|security|release>`
+in every repo.
+
+Tools (all GitHub reads and writes go through them):
+
+- `tools/ci.py`: a repository's CI history as a bounded digest of
+  clusters of failures; reruns; `flakes.toml`.
+- `tools/drift.py`: status prose against the facts it describes.
+- `tools/bot.py`: writes as the GitHub App `oxrok-bot` (push to an
+  `agent/` branch, draft PR, issue, comment), so a person reviews them.
+- `tools/board.py`: the Maintenance board.
+- `tools/rulesets.py`, `rulesets/*.json`: the two main-branch rulesets.
+- `tools/pin_actions.py`: SHA-pinned actions, no persisted credentials.
+
+Skills: `.claude/skills/ci-doctor`, `.claude/skills/docs-drift`. They are
+run by hand from this repo today; `docs/AGENT-POLICY.md` says how one is
+promoted to a workflow and then to a schedule.
+
+Rules for any agent doing maintenance here:
+
+- Read digests, not raw logs or other people's text. `ci.py` and
+  `drift.py` exist so you never open a log or an issue body yourself.
+  If a digest is not enough, read the source in the checkout.
+- Write only on a branch named `agent/<skill>-<slug>`, pushed with
+  `bot.py push`, as a draft PR or an issue through `bot.py`. Never push
+  to main, never merge, never approve. The bot is never a bypass actor of
+  a ruleset, and you do not edit `rulesets/` or `.github/workflows/` to
+  make a failure go away.
+- Prose follows facts. `docs/drivers.toml`, `tests/emu` and `src/` are
+  facts; README, ROADMAP, DEVICES and CHANGELOG follow them.
+- Never run anything with `--dangerously-skip-permissions` or an
+  equivalent. Never put a token in a command line that a log can show;
+  `bot.py` handles that.
+- `upstream-intake` is the one skill that reads text from outside the
+  org. It stays interactive: a person runs it and watches it. Do not
+  schedule it or wrap it in a workflow.
+- Every PR body says which tool produced the digest it acted on and what
+  was run locally to check the change.
