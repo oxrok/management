@@ -62,7 +62,7 @@ format or clippy complaint, a golden the change plainly meant to update):
 
    ```
    python3 tools/bot.py push <repo-dir> agent/ci-<slug>
-   python3 tools/bot.py pr --repo oxrok/oxrok --head agent/ci-<slug> --draft \
+   python3 tools/bot.py pr --repo <owner/repo> --head agent/ci-<slug> --draft \
      --title "ci: <what>" --body-file <body.md> --label maintenance --label area:ci
    python3 tools/board.py add <pr-url> --area ci
    ```

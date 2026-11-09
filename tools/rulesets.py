@@ -29,6 +29,8 @@ RULESETS = ROOT / "rulesets"
 
 
 def bodies(entry):
+    if not entry.get("checks"):
+        die("%s has no `checks` in config.toml; a protection ruleset without required checks would let direct pushes through" % entry["name"])
     protection = json.loads((RULESETS / "protection.json").read_text())
     for rule in protection["rules"]:
         if rule["type"] == "required_status_checks":

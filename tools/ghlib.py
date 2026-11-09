@@ -39,7 +39,8 @@ def gh(*args, json_out=False, stdin=None, env=None, check=True):
         time.sleep(5 * (attempt + 1))
     if not check:
         return None
-    die("gh %s failed:\n%s" % (" ".join(args), r.stderr.strip()))
+    shown = ["<redacted>" if a.lower().startswith("authorization:") else a for a in args]
+    die("gh %s failed:\n%s" % (" ".join(shown), r.stderr.strip()))
 
 
 def load_config():

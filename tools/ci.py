@@ -90,7 +90,9 @@ def failed_log(repo, run_id, job_id):
     text = gh("run", "view", str(run_id), "-R", repo, "--job", str(job_id), "--log-failed",
               check=False)
     if text is None:
-        text = ""
+        # A failed fetch is not an empty log: leave the cache alone and try again next time.
+        print("warning: could not fetch the log of job %d" % job_id, file=sys.stderr)
+        return ""
     f.write_text(text)
     return text
 
@@ -100,7 +102,7 @@ def clean_lines(raw):
     for line in raw.split("\n"):
         m = LOG_LINE.match(line)
         text = m.group("text") if m else line
-        text = strip_ansi(text).rstrip()
+        text = strip_ansi(text).rstrip()[:240]  # one line of a dumped buffer stays one line
         if text:
             out.append(text)
     return out
@@ -142,12 +144,13 @@ def collect(repo, workflow, branch, since, limit):
     clusters = {}
     skipped_runs = []
     for run in runs:
-        if run["conclusion"] not in ("failure", "timed_out", "cancelled"):
-            continue
+        # A green run can still have skipped the emulator tier, so look at every run's jobs.
         jobs = run_jobs(repo, run["databaseId"])
         emu = [j for j in jobs if j["name"].startswith("emulator (oxrok")]
         if emu and all(j["conclusion"] == "skipped" for j in emu):
             skipped_runs.append(run["databaseId"])
+        if run["conclusion"] not in ("failure", "timed_out", "cancelled"):
+            continue
         for job in jobs:
             if job["conclusion"] not in ("failure", "timed_out", "cancelled"):
                 continue

@@ -144,12 +144,19 @@ def cmd_push(args):
     m = re.match(r"^(?:git@github\.com:|https://github\.com/)([\w.-]+/[\w.-]+?)(?:\.git)?$", url)
     if not m:
         die("origin is not a GitHub remote: %s" % url)
-    if re.match(r"^(main|master)$", args.branch):
-        die("the bot does not push to %s" % args.branch)
+    if not args.branch.startswith("agent/"):
+        die("the bot pushes only to agent/* branches, not %s (AGENTS.md, Maintenance)" % args.branch)
     authed = "https://x-access-token:%s@github.com/%s.git" % (token(), m.group(1))
     cmd = ["git", "-C", args.dir, "push", "-q"]
     if args.force:
-        cmd.append("--force-with-lease")
+        # A URL has no remote-tracking ref for the lease, so name the tip we last
+        # fetched: the push is refused if the branch moved since.
+        known = subprocess.run(["git", "-C", args.dir, "rev-parse", "--verify", "-q",
+                                "refs/remotes/origin/" + args.branch],
+                               capture_output=True, text=True)
+        if known.returncode != 0:
+            die("no fetched tip for origin/%s to lease on; `git fetch origin` first" % args.branch)
+        cmd.append("--force-with-lease=refs/heads/%s:%s" % (args.branch, known.stdout.strip()))
     cmd += [authed, "%s:refs/heads/%s" % (args.branch, args.branch)]
     r = subprocess.run(cmd, capture_output=True, text=True)
     # Never echo the command line: it carries the token.

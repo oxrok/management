@@ -111,7 +111,7 @@ def collect_facts(oxrok, ui, website):
             p = website / rel
             if not p.exists():
                 continue
-            for n, line in enumerate(p.read_text().split("\n"), 1):
+            for n, line in enumerate(p.read_text(encoding="utf-8").split("\n"), 1):
                 for m in re.finditer(r"(?:--version |\boxrok )(\d+\.\d+\.\d+(?:-[\w.]+)?)\b", line):
                     f["website_versions"].append((rel, n, m.group(1)))
     return f
