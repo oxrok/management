@@ -5,12 +5,27 @@ owner = "oxrok"
 tracking_repo = "oxrok/oxrok"
 project_title = "Upstream intake"
 # Set by `tools/track.py setup` once the project exists.
-project_number = 0
+project_number = 1
 
 # Closed, unmerged upstream PRs older than this are not offered by intake.
 # Upstream's GitHub repos are read-only mirrors: most older closed PRs were
 # applied through the mailing list, and oxrok ports upstream master.
 closed_since = "2026-01-01"
+
+# Project field values. Changing these needs `tools/track.py setup` again.
+statuses = ["Triage", "Backlog", "In progress", "Done", "Won't do"]
+workstreams = [
+  "tooling",
+  "firmware-build",
+  "bug-check",
+  "model",
+  "driver-rework",
+  "new-driver",
+  "input-format",
+]
+targets = ["oxrok/oxrok", "oxrok/oxrok-util", "oxrok/firmware-fx2lafw"]
+
+# Tables below this point: plain keys after them would belong to the last table.
 
 # Upstream repos watched by intake, and where their work usually lands.
 [[upstream]]
@@ -28,16 +43,3 @@ target = "oxrok/firmware-fx2lafw"
 [[upstream]]
 repo = "sigrokproject/sigrok-firmware"
 target = "oxrok/firmware-fx2lafw"
-
-# Project field values. Changing these needs `tools/track.py setup` again.
-statuses = ["Triage", "Backlog", "In progress", "Done", "Won't do"]
-workstreams = [
-  "tooling",
-  "firmware-build",
-  "bug-check",
-  "model",
-  "driver-rework",
-  "new-driver",
-  "input-format",
-]
-targets = ["oxrok/oxrok", "oxrok/oxrok-util", "oxrok/firmware-fx2lafw"]
