@@ -9,6 +9,7 @@ import os
 import re
 import subprocess
 import sys
+import time
 import tomllib
 from pathlib import Path
 
@@ -28,12 +29,17 @@ def gh(*args, json_out=False, stdin=None, env=None, check=True):
     e = dict(os.environ)
     if env:
         e.update(env)
-    r = subprocess.run(["gh", *args], capture_output=True, text=True, input=stdin, env=e)
-    if r.returncode != 0:
-        if not check:
-            return None
-        die("gh %s failed:\n%s" % (" ".join(args), r.stderr.strip()))
-    return json.loads(r.stdout) if json_out else r.stdout
+    for attempt in range(4):
+        r = subprocess.run(["gh", *args], capture_output=True, text=True, input=stdin, env=e)
+        if r.returncode == 0:
+            return json.loads(r.stdout) if json_out else r.stdout
+        # GitHub's 5xx and rate limits pass; everything else is final.
+        if not re.search(r"HTTP 5\d\d|rate limit|timeout", r.stderr) or attempt == 3:
+            break
+        time.sleep(5 * (attempt + 1))
+    if not check:
+        return None
+    die("gh %s failed:\n%s" % (" ".join(args), r.stderr.strip()))
 
 
 def load_config():

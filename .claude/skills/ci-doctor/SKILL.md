@@ -48,7 +48,10 @@ at the source the error names in the repo checkout (`config.toml`,
 **Real, with an evident fix** (a type mismatch, a missing import, a
 format or clippy complaint, a golden the change plainly meant to update):
 
-1. In the repo checkout, `git fetch origin && git switch -c agent/ci-<slug> origin/main`.
+1. The repo checkout is a person's working tree, so do not switch its
+   branch. Work in a worktree:
+   `git -C <repo-dir> fetch -q origin && git -C <repo-dir> worktree add -b agent/ci-<slug> <scratch>/ci-<slug> origin/main`,
+   and remove it when the PR is open (`git worktree remove`).
 2. Make the smallest change that fixes it. Do not refactor around it.
 3. Run the gate that failed, locally: for oxrok `cargo fmt --all --check`,
    `cargo clippy --workspace --all-targets --all-features`, or the test the

@@ -108,6 +108,11 @@ def clean_lines(raw):
 
 def excerpt(lines):
     """(kind, first error line, excerpt lines) from a cleaned log."""
+    # The runner's own cleanup and deprecation notices say nothing about the failure.
+    for i, line in enumerate(lines):
+        if line.startswith("Post job cleanup.") or line.startswith("##[warning]Node.js"):
+            lines = lines[:i]
+            break
     for kind, pat in PATTERNS:
         for i, line in enumerate(lines):
             if pat.search(line):
