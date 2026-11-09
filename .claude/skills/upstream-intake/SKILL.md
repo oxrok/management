@@ -58,6 +58,9 @@ python3 tools/track.py add --title "<driver>: <what>" --workstream <ws> \
 ```
 
 Use `--status Triage` only if you could not decide; say what is missing.
+If the PR includes vendor firmware binaries, say in the notes that only
+its code is to be ported, never the binaries (AGENTS.md, "Never commit
+vendor firmware").
 For sigrok-util and firmware PRs use the target from `config.toml`. When a
 driver needs an extractor, put both PRs in one item with a checklist.
 

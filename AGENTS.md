@@ -4,6 +4,29 @@ This repo manages how oxrok takes in work from upstream sigrok: which
 upstream pull requests are worth porting, where each one stands, and the
 tools and skills that keep that current. It holds no oxrok code.
 
+## Never commit vendor firmware
+
+Never, ever upload vendor firmware to git: not to oxrok, oxrok-util,
+firmware-fx2lafw, this repo, oxrok-dumps, a fork, a branch, a gist, an
+issue attachment, a release asset or a test fixture. That covers FX2
+firmware, FPGA bitstreams, `.ccf`/`.rbf`/`.fw`/`.bitstream` files, vendor
+installers and anything extracted from them, whole or in part.
+
+The only exception is written permission from that specific vendor for
+that specific firmware. Permission from one vendor does not cover
+another, and a redistributable-looking licence file inside the vendor's
+package is not permission; ask the user.
+
+What we do instead: ship extractors that fetch or read the vendor's own
+download on the user's machine, and keep extracted files in scratch
+directories outside every repository. Before committing anywhere, check
+that no extracted or downloaded firmware is staged (`git status`,
+`git diff --cached --stat`). Open firmware with its source (fx2lafw, the
+open Kingst FX2 firmware) is not vendor firmware and is fine.
+
+When triaging, an upstream PR that adds vendor firmware binaries is
+wanted at most for its code: port the code, never the binaries.
+
 ## Where things live
 
 - **The project board**, "Upstream intake", owned by the oxrok org and
@@ -73,7 +96,8 @@ for oxrok goes in `decisions.toml`, not on the board.
   closed before `closed_since`.
 - Licence: oxrok is GPL-3.0-or-later. GPL, LGPL and permissive sources
   are fine; note provenance in oxrok's `docs/LICENSING.md` when porting.
-  Closed firmware is never shipped (users install it from the vendor).
+  Vendor firmware is never committed or shipped; see "Never commit vendor
+  firmware" above.
 
 ## When work lands
 

@@ -31,7 +31,11 @@ python3 tools/track.py move <issue> "In progress" --comment "<who, where: branch
 ```
 
 Work happens in the target repo (oxrok/oxrok, oxrok/oxrok-util,
-oxrok/firmware-fx2lafw) under that repo's own rules. For oxrok/oxrok,
+oxrok/firmware-fx2lafw) under that repo's own rules. Never commit vendor
+firmware or anything extracted from it, anywhere, without the vendor's
+written permission (AGENTS.md, "Never commit vendor firmware"): test
+extractors in scratch directories, and check `git diff --cached --stat`
+before every commit. For oxrok/oxrok,
 its AGENTS.md and docs/DRIVER_PORTING.md apply. Reference the issue in
 commit messages (`oxrok/oxrok#<issue>`).
 
