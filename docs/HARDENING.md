@@ -44,14 +44,14 @@ workflow.
 | 2 no persisted creds | PR #70 | PR #6 | PR #2 | PR #1 | yes |
 | 3 Dependabot | PR #70 | PR #6 | PR #2 | PR #1 | yes |
 | 4 scanning, branch delete | yes | yes | yes | yes | yes |
-| 5 rulesets | pending | pending | pending | pending | pending |
-| 6 bot not bypass | n/a until the App exists | | | | |
+| 5 rulesets | yes | yes | yes | yes | yes |
+| 6 bot not bypass | yes, once the App exists | | | | |
 | 7 read-only token default | yes (org) | | | | |
 | 8 no API keys in secrets | yes | yes | yes | yes | yes |
 
-"PR #n" means the change is in that open pull request; "pending" means the
-ruleset pair has not been applied yet (it is applied after the pin PRs
-merge, so the required checks exist on main).
+"PR #n" means the change is in that open pull request. The ruleset pair
+was applied on 2026-11-09 and oxrok's earlier single ruleset ("main
+branch": PR with one review, squash only, admin bypass always) removed.
 
 ## Known gaps
 
