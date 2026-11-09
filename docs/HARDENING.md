@@ -45,7 +45,7 @@ workflow.
 | 3 Dependabot | PR #70 | PR #6 | PR #2 | PR #1 | yes |
 | 4 scanning, branch delete | yes | yes | yes | yes | yes |
 | 5 rulesets | yes | yes | yes | yes | yes |
-| 6 bot not bypass | yes, once the App exists | | | | |
+| 6 bot not bypass | yes | yes | yes | yes | yes |
 | 7 read-only token default | yes (org) | | | | |
 | 8 no API keys in secrets | yes | yes | yes | yes | yes |
 
