@@ -1,0 +1,130 @@
+# Upstream PRs that are handled without a tracking issue.
+#
+# verdict:
+#   not-applicable  only concerns the C stack (bindings, autotools, glib,
+#                   libusb event loop, C internals) and has no oxrok analogue
+#   already-done    oxrok already has what the PR adds
+#   wont-do         decided against; the reason says why
+#   superseded      another tracked PR replaces it; the reason names it
+#
+# A decision is a triage result, not a judgement of the PR's author or of
+# how it was written. AI authorship is never a reason (see AGENTS.md).
+# To reverse one, delete the entry and track the PR with `tools/track.py add`.
+
+# --- libsigrok: C-only ------------------------------------------------------
+
+[[decision]]
+ref = "sigrokproject/libsigrok#159"
+verdict = "not-applicable"
+reason = "Python bindings (rational values); oxrok has no SWIG bindings."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#160"
+verdict = "not-applicable"
+reason = "Python bindings exception class; oxrok has no SWIG bindings."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#280"
+verdict = "not-applicable"
+reason = "SWIG 4.4 Python bindings."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#287"
+verdict = "not-applicable"
+reason = "SWIG 4.4 Python return type."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#303"
+verdict = "not-applicable"
+reason = "SWIG 4.5 Python 2 macros."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#304"
+verdict = "not-applicable"
+reason = "macOS build of the C VXI-11 XDR code."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#233"
+verdict = "not-applicable"
+reason = "C linker-section driver list under LTO; oxrok registers drivers in Rust."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#129"
+verdict = "not-applicable"
+reason = "srzip save speed via miniz or /usr/bin/zip; oxrok's srzip output is its own code."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#235"
+verdict = "not-applicable"
+reason = "Windows libusb pollfds in the glib event loop; oxrok has no glib loop."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#242"
+verdict = "not-applicable"
+reason = "USB as a glib idle source on Windows; oxrok has no glib loop."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#274"
+verdict = "not-applicable"
+reason = "tcp-raw serial and glib IO on Windows in the C serial layer."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#277"
+verdict = "not-applicable"
+reason = "C helper std_i32_idx()."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#101"
+verdict = "wont-do"
+reason = "New SR_CONF_CHANNEL_GROUP meta packet changes the datafeed API; upstream maintainers objected."
+
+# --- libsigrok: already in oxrok ---------------------------------------------
+
+[[decision]]
+ref = "sigrokproject/libsigrok#175"
+verdict = "already-done"
+reason = "R&S RTH100x support was merged upstream (10e6dfd1); the PR is stale."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#59"
+verdict = "already-done"
+reason = "Instrustar ISDS205B is in oxrok's hantek-6xxx (src/drivers/hantek_6xxx/protocol.rs)."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#164"
+verdict = "already-done"
+reason = "Voltcraft DSO-2020 is in oxrok's hantek-6xxx."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#315"
+verdict = "already-done"
+reason = "Intronix LogicPort LA1034: oxrok's intronix-logicport driver."
+
+# --- libsigrok: other ---------------------------------------------------------
+
+[[decision]]
+ref = "sigrokproject/libsigrok#226"
+verdict = "wont-do"
+reason = "OLS metadata in little endian: reviewers showed the OLS verilog core sends it big endian; no evidence of breakage given."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#260"
+verdict = "wont-do"
+reason = "Infineon FX2G3 needs closed firmware loaded with the vendor's tool; upstream asked for open firmware."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#297"
+verdict = "wont-do"
+reason = "Pxview fork; the author asked for it to be removed (private code)."
+
+[[decision]]
+ref = "sigrokproject/libsigrok#305"
+verdict = "superseded"
+reason = "FNIRSI DLA-16, resubmitted by the same author as libsigrok#306."
+
+# --- sigrok-util ----------------------------------------------------------------
+
+[[decision]]
+ref = "sigrokproject/sigrok-util#10"
+verdict = "not-applicable"
+reason = "Man page and README cleanups for sigrok-util, partly done upstream."

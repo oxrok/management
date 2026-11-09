@@ -1,0 +1,586 @@
+# The first triage (2026-11-09), loaded once with `tools/track.py seed`.
+# Seeding skips any item whose upstream PRs are already tracked, so it is
+# safe to rerun. After seeding, the project is the source of truth: change
+# items there, not here.
+
+# --- tooling (oxrok-util) -------------------------------------------------------
+
+[[item]]
+title = "oxrok-util: Intronix LogicPort firmware extractor"
+workstream = "tooling"
+target = "oxrok/oxrok-util"
+status = "In progress"
+upstream = ["sigrokproject/sigrok-util#22"]
+notes = """
+`sigrok-fwextract-intronix-logicport`: gets LogicPort.ccf from an installed copy, the vendor installer, or a download (`-d`), and saves it as `intronix-logicport.ccf`. Cherry-picked onto oxrok-util master (f178d3a), not pushed yet.
+
+- [ ] Push to oxrok-util
+- [ ] Run once against the vendor installer
+- [ ] oxrok docs point to oxrok-util (docs/DEVICES.md, src/drivers/logicport/mod.rs)
+"""
+
+[[item]]
+title = "oxrok-util: Kingst extractor reads macOS and Windows KingstVIS"
+workstream = "tooling"
+target = "oxrok/oxrok-util"
+status = "In progress"
+upstream = ["sigrokproject/sigrok-util#21"]
+notes = """
+Locates the Qt resource tables by content when the ELF symbols are missing, so the Mach-O and PE builds work. Cherry-picked onto oxrok-util master (5f6746e), not pushed yet. The author tested macOS only; the ELF path is unchanged but untested.
+
+- [ ] Push to oxrok-util
+- [ ] Run against a Linux KingstVIS binary and compare the manpage checksums
+"""
+
+# --- firmware-build (firmware-fx2lafw) ----------------------------------------
+
+[[item]]
+title = "firmware-fx2lafw: build on Linux, macOS and Windows in CI"
+workstream = "firmware-build"
+target = "oxrok/firmware-fx2lafw"
+status = "Backlog"
+upstream = [
+  "sigrokproject/sigrok-util#15",
+  "sigrokproject/sigrok-util#16",
+  "sigrokproject/sigrok-util#18",
+]
+notes = """
+The firmware needs sdcc (>= 4.2.3 syntax is already in the tree) and autotools only. The sigrok-util cross-compile PRs listed here package PulseView and sigrok-cli; read them for the macOS (Homebrew, Apple Silicon) and MXE toolchain steps that carry over.
+
+- [ ] CI matrix: Linux, macOS (Homebrew sdcc), Windows (MSYS2 sdcc)
+- [ ] Publish the built .fw files as release assets
+- [ ] Document where oxrok looks for them (SIGROK_FIRMWARE_DIR)
+"""
+
+[[item]]
+title = "firmware-fx2lafw: WCID descriptors so Windows binds WinUSB without Zadig"
+workstream = "firmware-build"
+target = "oxrok/firmware-fx2lafw"
+status = "Backlog"
+upstream = ["sigrokproject/sigrok-firmware-fx2lafw#5"]
+notes = """
+oxrok's nusb backend needs WinUSB bound on Windows (docs/USB.md). Only helps once the firmware with the descriptors is in the device's EEPROM, or after re-enumeration with it loaded.
+"""
+
+[[item]]
+title = "firmware-fx2lafw: open FX2 firmware for the Kingst LA2016 family"
+workstream = "firmware-build"
+target = "oxrok/firmware-fx2lafw"
+status = "Backlog"
+upstream = ["sigrokproject/sigrok-firmware#1"]
+notes = """
+Drop-in replacement for the vendor's kingst-la-01a2.fw (LGPL), tested by users with PulseView and sigrok-cli. Upstream declined it for sigrok-firmware (binaries only) and pointed at fx2lafw. Removes the FX2 half of the extraction (the FPGA bitstreams still come from KingstVIS) and documents the USB protocol for the emulator model.
+"""
+
+# --- bug-check (oxrok) ----------------------------------------------------------
+
+[[item]]
+title = "usb: devices on bus 0 (macOS) are rejected"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#295"]
+notes = """
+libusb on macOS reports bus 0. oxrok's conn parser has the same rejection: src/usb/mod.rs `(Ok(bus @ 1..), Ok(addr @ 1..))`. Check what the nusb backend reports for bus numbers on macOS and Windows (nusb_backend.rs sets `bus = 0`).
+"""
+
+[[item]]
+title = "hid: macOS DevSrvsID paths"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#290"]
+notes = """
+hidapi on Apple Silicon returns `DevSrvsID:<id>` paths; libsigrok's path parser rejects them and HID meters (Brymen) vanish. Check oxrok's HID layer handles the format.
+"""
+
+[[item]]
+title = "rdtech-dps: RD6006 reads inf (multipliers never set)"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#283"]
+notes = """
+In C, rdtech_dps_update_range returns early for single-range models, so the multipliers stay 0. oxrok ports update_range closely (src/drivers/rdtech_dps/protocol.rs); add an emulator case for a single-range RD model.
+"""
+
+[[item]]
+title = "kingst-la2016: stream mode stalls at low data rates (LA1010)"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#320"]
+notes = """
+Captures hang ~0.5 s in with few channels or low rates on stream-only models. oxrok has stream mode (`continuous=on`); check whether the same condition applies and port the fix.
+"""
+
+[[item]]
+title = "center-3xx: recover from a lost packet; honour --channels"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#300", "sigrokproject/libsigrok#302"]
+notes = """
+A momentary RS232 loss stops streaming until restart; #302 re-requests data on a response timeout. #300 also fixes `--channels` being ignored (all four channels always shown).
+"""
+
+[[item]]
+title = "input/vcd: crafted files and maxchannels"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#312", "sigrokproject/libsigrok#289"]
+notes = """
+#312: a crafted VCD writes past the feed queue buffer in C. Rust bounds-checks, but an out-of-range index would still panic: add the reproducer as a test and make sure it is an error, not a panic. #289: maxchannels=0 crashes PulseView; oxrok treats 0 as unlimited (src/formats/input/vcd.rs), so only add a case.
+"""
+
+[[item]]
+title = "demo: wide incremental samples and repeated stops"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#319"]
+notes = """
+C advanced one byte per wide sample and could emit END twice. oxrok's demo is a rewrite with a stop flag; check logic_unitsize > 1 output and repeated stop requests.
+"""
+
+[[item]]
+title = "hameg-hmo: R&S RTM/RTB digital channel state and capability flags"
+workstream = "bug-check"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#281", "sigrokproject/libsigrok#259"]
+notes = """
+#281: RTM3004 hangs on `:LOG%d:STAT?`; RTM/RTB use `:DIG%d:PROB:ENAB?`. #259: R&S scopes can't enable single logic channels (some not pods), plus a C sr_analog_init ordering bug (check that oxrok doesn't have an equivalent).
+"""
+
+# --- model (oxrok) -----------------------------------------------------------------
+
+[[item]]
+title = "rigol-ds: DHO800/900 (and DHO1000/4000)"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = [
+  "sigrokproject/libsigrok#318",
+  "sigrokproject/libsigrok#246",
+  "sigrokproject/libsigrok#229",
+]
+notes = """
+#318 adds PROTOCOL_V6 next to oxrok's V5 (MSO5000), tested on a DHO914S, plus the DHO9x4S signal generator. #246 was community-tested on DHO800/900/1000/4000. Start from #318, take model coverage from #246.
+"""
+
+[[item]]
+title = "rigol-ds: MSO5000 digital channels in memory mode"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#95"]
+notes = """
+Reads digital channels from memory on the MSO5000 (bugs 1609, maybe 1191 for MSO1104Z). Known issues with sample rate and digital-only mode.
+"""
+
+[[item]]
+title = "rigol-ds, rigol-dg: MSO5504 model id"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#278"]
+notes = "Owners re-label MSO5000s as MSO5504 to unlock 500 ps/div; add the id to both drivers. Closed upstream unmerged."
+
+[[item]]
+title = "siglent-sds: HD series, E-series, SDS2000X Plus"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = [
+  "sigrokproject/libsigrok#245",
+  "sigrokproject/libsigrok#247",
+  "sigrokproject/libsigrok#279",
+  "sigrokproject/libsigrok#236",
+  "sigrokproject/libsigrok#176",
+]
+notes = """
+Overlapping PRs. #245 (SDS2000X HD/800X HD/1000X HD/2000X Plus, builds on #176, tested on EEVblog), #247 (E-series, tested on Windows), #279 (SDS800X HD models and memory sizes), #236 (fragmented headers, SDS1xxxE-X). Consolidate into one change on oxrok's siglent-sds.
+"""
+
+[[item]]
+title = "korad-kaxxxxp: KA3305P multi-output, KA3005PS, KKG305P"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = [
+  "sigrokproject/libsigrok#307",
+  "sigrokproject/libsigrok#269",
+  "sigrokproject/libsigrok#219",
+]
+notes = """
+#307: dual-output KA3305P and per-output state. #269: newline-terminated commands (KA3005PS; maybe Velleman LABPS3005DN). #219: KKG305P status bits, remote sense and external control flags. All touch command framing; do together.
+"""
+
+[[item]]
+title = "atten-pps3xxx: PPS3205T-3S (5 A model)"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#286"]
+notes = "Closed upstream unmerged; a model table entry."
+
+[[item]]
+title = "serial-dmm: Tenma 72-6870 and Digitech QM1578"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#282", "sigrokproject/libsigrok#187"]
+notes = """
+#282: FS9721 with user bit 2 as temperature. #187: QM1578 protocol parser (via an ESP32 BLE-serial bridge).
+"""
+
+[[item]]
+title = "scpi-dmm: OWON XDM ranges and XDM1241"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#270"]
+
+[[item]]
+title = "scpi-pps: Siglent SPD3303 series"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#77"]
+notes = "Needs SCPI quirks for Siglent's non-conforming replies; tested over LAN and USBTMC."
+
+[[item]]
+title = "gwinstek-gds-800: GDS-2000 series, per-channel vdiv"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#121"]
+
+[[item]]
+title = "fluke-dmm: all Fluke 28x channels"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#43"]
+notes = "RFC upstream; logs live, primary, secondary and the other QM channels."
+
+[[item]]
+title = "rdtech-dps: eTommens eTM-xxxxP / Hanmatek HM305P"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#100"]
+
+[[item]]
+title = "rohde-schwarz-sme-0x: SMC100A, SMB100A, SMBV100A"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#140"]
+notes = "Tested on SME-03, SMB100A, SMBV100A and SMC100A."
+
+[[item]]
+title = "rigol-ds: Agilent DSO3000 (DSO3062A)"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#163"]
+
+[[item]]
+title = "serial-hid: WCH CH9329 (UNI-T UT-D09 cables) for UT181A"
+workstream = "model"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#298"]
+
+# --- driver-rework (oxrok) ------------------------------------------------------
+
+[[item]]
+title = "openbench-logic-sniffer: advanced triggers, RLE mode 3, robustness"
+workstream = "driver-rework"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = [
+  "sigrokproject/libsigrok#51",
+  "sigrokproject/libsigrok#251",
+  "sigrokproject/libsigrok#249",
+]
+
+[[item]]
+title = "ftdi-la: multiple channels, no dropped samples, FT232R erratum"
+workstream = "driver-rework"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#145"]
+
+[[item]]
+title = "dreamsourcelab-dslogic: U3Pro16"
+workstream = "driver-rework"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#170", "sigrokproject/sigrok-util#20"]
+notes = """
+- [ ] Driver: U3Pro16 and API version 2 (libsigrok#170)
+- [ ] oxrok-util: fetch the U3Pro16 bitstream (sigrok-util#20)
+"""
+
+[[item]]
+title = "dreamsourcelab-dslogic: DSLogic Plus Pango variant (V2 protocol)"
+workstream = "driver-rework"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = [
+  "sigrokproject/libsigrok#291",
+  "sigrokproject/libsigrok#292",
+  "sigrokproject/libsigrok#293",
+  "sigrokproject/libsigrok#294",
+]
+notes = "A stack: baseline, channel modes and RLE, triggers, stream+RLE long captures. The Pango bitstream is not redistributable."
+
+# --- new-driver (oxrok) ----------------------------------------------------------
+
+[[item]]
+title = "px-logic: PX Logic 16/32"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#284", "sigrokproject/sigrok-util#19"]
+notes = """
+- [ ] Driver (libsigrok#284)
+- [ ] oxrok-util: firmware extractor (sigrok-util#19)
+"""
+
+[[item]]
+title = "sipeed-slogic: SLogic Combo8 and SLogic16U3"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#275", "sigrokproject/libsigrok#299"]
+notes = "Two competing drivers; #275 is the third submission by the vendor's side."
+
+[[item]]
+title = "fnirsi-dla16 / fnirsi-dla32"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#306", "sigrokproject/libsigrok#311"]
+notes = "Protocol from the GPL TechBirdCompany overlay (compatible with oxrok's GPL-3.0-or-later; note provenance in docs/LICENSING.md). Linux scan problems reported on #311."
+
+[[item]]
+title = "appa-dmm: APPA family and rebrands (Benning, Sefram, ...)"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#102"]
+
+[[item]]
+title = "hantek-1008c: Hantek 1008C"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#301"]
+
+[[item]]
+title = "hantek-2xx2: Hantek 2D42/2D72/2C42"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#317"]
+
+[[item]]
+title = "hantek-dso2xxx: Hantek DSO2000 (quick-fetch firmware)"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#285"]
+
+[[item]]
+title = "rigol-ds5k: Rigol DS5000"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#313"]
+
+[[item]]
+title = "tektronix: TDS/TPS/TBS low-end scopes"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#213"]
+
+[[item]]
+title = "agilent-546xx: Agilent 54621D"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#206"]
+
+[[item]]
+title = "zlg-la1016: ZLG LA-1016"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#296"]
+
+[[item]]
+title = "easysync-dla8: EasySync ES-DLA-8"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#310"]
+
+[[item]]
+title = "hsdaoh-la: hsdaoh logic analyzer"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#314"]
+notes = "The author reports testing on real hardware."
+
+[[item]]
+title = "raspberrypi-rp1: RP1 PIO logic analyzer"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#309"]
+
+[[item]]
+title = "picomso: PicoMSO (RP2040/RP2350)"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#288"]
+
+[[item]]
+title = "fx3lafw: Cypress FX3 with libre firmware"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#154"]
+notes = "zeldin's fx3lafw has a libre license, unlike the firmware of the earlier, closed libsigrok#148."
+
+[[item]]
+title = "labnation-smartscope: LabNation SmartScope"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#258"]
+
+[[item]]
+title = "adalm2000: Analog Devices ADALM2000"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#104", "sigrokproject/libsigrok#243"]
+notes = "#104 is logic and analog; #243 is logic only via libiio."
+
+[[item]]
+title = "open-logic-bit: open-logic-bit gateware (Digilent Digital Discovery)"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#149"]
+
+[[item]]
+title = "tiny-logic-friend-la: TinyLogicFriend"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#137"]
+
+[[item]]
+title = "pslab: PSLab oscilloscope"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#150"]
+
+[[item]]
+title = "fwili: FREE WILi"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#244"]
+
+[[item]]
+title = "rohde-schwarz-nrpxsn: R&S NRPxxS(N) power sensors"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#139"]
+
+[[item]]
+title = "aim-tti-dps: Aim-TTi DC power supplies"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#146"]
+
+[[item]]
+title = "xy-sk120: XY-SK120 power supply (Modbus)"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#316"]
+
+[[item]]
+title = "francaise-instrumentation-ams515: AMS515 power supply"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#172"]
+
+[[item]]
+title = "mhinstek-mhs-5200a: MHS-5200A function generator"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#115"]
+
+[[item]]
+title = "uni-t-ut8802e / ut8803e bench meters"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#220", "sigrokproject/libsigrok#221"]
+notes = "Upstream asked whether these are an already-supported DMM chip; check that first."
+
+[[item]]
+title = "uni-t-ut161x: UNI-T UT161 series"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#308"]
+
+[[item]]
+title = "uss-dbs28: USS-DBS28 scale"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#106"]
+
+[[item]]
+title = "sdl2: sound card oscilloscope"
+workstream = "new-driver"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#185"]
+notes = "Low priority. In Rust this would use cpal rather than SDL2."
+
+# --- input-format (oxrok) --------------------------------------------------------
+
+[[item]]
+title = "input: Flipper Zero SubGHz .sub"
+workstream = "input-format"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#192"]
+
+[[item]]
+title = "input: NCI GoLogic project files"
+workstream = "input-format"
+target = "oxrok/oxrok"
+status = "Backlog"
+upstream = ["sigrokproject/libsigrok#90"]
