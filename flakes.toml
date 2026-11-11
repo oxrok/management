@@ -1,2 +1,11 @@
 # Known CI flakes, kept by tools/ci.py flake. A flake is a failure that
 # passed on a rerun with no change; its signature is ci.py's cluster key.
+
+[[flake]]
+signature = "emulator (oxrok against the goldens, i/n) | FAIL unplug at start (full, no oracle): no output from oxrok; oxrok output differs from unplug-at-start.out [-d greatfet --samples N -O bits]"
+job = "emulator (oxrok against the goldens, i/n)"
+first_seen = "2026-11-09"
+last_seen = "2026-11-09"
+count = 1
+issue = 77
+note = "unplug lands before the transfer that reports it; pacing of the case, not the driver"

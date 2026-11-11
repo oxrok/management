@@ -142,10 +142,16 @@ Tools (all GitHub reads and writes go through them):
 - `tools/board.py`: the Maintenance board.
 - `tools/rulesets.py`, `rulesets/*.json`: the two main-branch rulesets.
 - `tools/pin_actions.py`: SHA-pinned actions, no persisted credentials.
+- `tools/plan.py`: in the ci-doctor workflow, what the agent wants opened,
+  applied by a separate job as the bot. Everything the CI doctor opens is
+  labelled `ci-doctor` and names its clusters in `CI-Doctor:` lines, so
+  `ci.py` marks those clusters `tracked by` and no run opens them twice.
 
 Skills: `.claude/skills/ci-doctor`, `.claude/skills/docs-drift`. They are
-run by hand from this repo today; `docs/AGENT-POLICY.md` says how one is
-promoted to a workflow and then to a schedule.
+run by hand from this repo; `ci-doctor` also has a `workflow_dispatch`
+workflow, `.github/workflows/ci-doctor.yml`, with no schedule yet.
+`docs/AGENT-POLICY.md` says how one is promoted to a workflow and then to
+a schedule.
 
 Rules for any agent doing maintenance here:
 

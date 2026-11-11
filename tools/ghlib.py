@@ -61,8 +61,14 @@ def repo_entry(cfg, name):
 
 
 def repo_path(cfg, name):
-    """Local checkout of a repo, from its [[repo]] `path` (relative to the repo root)."""
-    p = Path(repo_entry(cfg, name)["path"])
+    """Local checkout of a repo, from its [[repo]] `path` (relative to the repo root).
+
+    With OXROK_CHECKOUTS set (the ci-doctor workflow), the other repos are
+    under it by short name: $OXROK_CHECKOUTS/oxrok, $OXROK_CHECKOUTS/oxrok-ui."""
+    entry = repo_entry(cfg, name)
+    if os.environ.get("OXROK_CHECKOUTS") and entry["path"] != ".":
+        return Path(os.environ["OXROK_CHECKOUTS"]).resolve() / entry["name"].split("/")[1]
+    p = Path(entry["path"])
     return p if p.is_absolute() else (ROOT / p).resolve()
 
 
