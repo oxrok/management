@@ -116,11 +116,13 @@ jobs:
             foreground and wait for it; never background one or wait for a
             notification.
           # Parsed like a shell line: the tool list is quoted, or the spaces
-          # inside Bash(...) rules split it into separate arguments.
+          # inside Bash(...) rules split it into separate arguments. git is
+          # allowed whole: the token is read-only and no checkout keeps
+          # credentials, so a push cannot go anywhere.
           claude_args: |
             --max-turns 120
             --disallowedTools WebFetch,WebSearch
-            --allowedTools "Skill(ci-doctor),Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(git -C checkouts/:*),Bash(git worktree:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git log:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(cd checkouts/:*)"
+            --allowedTools "Skill(ci-doctor),Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(git:*),Bash(cd:*),Bash(ls:*),Bash(cat:*),Bash(head:*),Bash(tail:*),Bash(grep:*),Bash(wc:*),Bash(find:*),Bash(sed -n:*)"
       - name: Report
         # The agent's report (its last message, step 4 of the skill) and the
         # tool calls it was refused: names and the start of the input only.

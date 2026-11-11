@@ -22,7 +22,9 @@ on the latest run, the runs, and the first error block (at most 40 lines).
 A cluster marked `known flake` is in `flakes.toml` already. A cluster
 marked `tracked by <kind> <repo>#<n>` has an open pull request or issue
 labelled `ci-doctor` whose `CI-Doctor:` line names its signature: someone
-(you, an earlier run, a person) is already on it. A line about
+(you, an earlier run, a person) is already on it. A cluster marked `passed
+since <date>` is history: every job in it passed on a later run of the
+branch, so its excerpt is left out; report it in one line, do not act on it. A line about
 the emulator tier being skipped means the runner had no vhci-hcd and that
 run proved nothing about the emulator: always carry that into the report.
 
