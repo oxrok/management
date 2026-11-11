@@ -86,8 +86,21 @@ jobs:
           mkdir -p "$plan"
           echo '[]' > "$plan/plan.json"
           echo "CI_DOCTOR_PLAN=$plan" >> "$GITHUB_ENV"
+      - name: Digest
+        # ci.py is deterministic and takes minutes (it downloads the failed
+        # jobs' logs); run it here, not in the agent's session, where a long
+        # command gets moved to the background and the run ends waiting.
+        run: |
+          mkdir -p checkouts
+          python3 -I tools/ci.py failures --repo "$REPO" --since "$SINCE" > checkouts/ci-doctor-digest.md
+          grep -E '^(# |## |Emulator tier skipped)' checkouts/ci-doctor-digest.md | tee -a "$GITHUB_STEP_SUMMARY"
       - id: claude
         uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+        env:
+          # cargo clippy or nextest on oxrok takes minutes; let it finish in
+          # the foreground.
+          BASH_DEFAULT_TIMEOUT_MS: "1800000"
+          BASH_MAX_TIMEOUT_MS: "3600000"
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The job's own token, contents: read; no Claude GitHub App needed.
@@ -98,6 +111,10 @@ jobs:
             (read it if the skill does not load). You are running in the ci-doctor
             workflow: follow its "In the workflow" section.
             Repository: ${{ env.REPO }}; since: ${{ env.SINCE }}.
+            The digest is already made: read checkouts/ci-doctor-digest.md.
+            This session ends when you stop: run every command in the
+            foreground and wait for it; never background one or wait for a
+            notification.
           # Parsed like a shell line: the tool list is quoted, or the spaces
           # inside Bash(...) rules split it into separate arguments.
           claude_args: |
