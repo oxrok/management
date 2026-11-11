@@ -104,16 +104,22 @@ jobs:
             --max-turns 120
             --disallowedTools WebFetch,WebSearch
             --allowedTools "Skill(ci-doctor),Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(git -C checkouts/:*),Bash(git worktree:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git log:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(cd checkouts/:*)"
-      - name: Tool calls refused
-        # Names and the start of the input only; the full output stays off
-        # (show_full_output can carry secrets).
+      - name: Report
+        # The agent's report (its last message, step 4 of the skill) and the
+        # tool calls it was refused: names and the start of the input only.
+        # The full output stays off (show_full_output can carry secrets).
         if: always() && steps.claude.outputs.execution_file != ''
         env:
           EXEC: ${{ steps.claude.outputs.execution_file }}
         run: |
-          jq -r '[.[] | select(.type == "result")][-1].permission_denials // []
-                 | .[] | "\(.tool_name): \(.tool_input | tostring | .[0:200])"' "$EXEC" \
-            | tee -a "$GITHUB_STEP_SUMMARY"
+          {
+            echo "## The doctor's report"
+            jq -r '[.[] | select(.type == "result")][-1].result // "(no report)" | .[0:12000]' "$EXEC"
+            echo
+            echo "## Tool calls refused"
+            jq -r '[.[] | select(.type == "result")][-1].permission_denials // []
+                   | .[] | "- \(.tool_name): \(.tool_input | tostring | .[0:200])"' "$EXEC"
+          } | tee -a "$GITHUB_STEP_SUMMARY" || echo "could not read $EXEC"
       - name: The plan
         if: always()
         run: python3 -I tools/plan.py show | tee -a "$GITHUB_STEP_SUMMARY"
