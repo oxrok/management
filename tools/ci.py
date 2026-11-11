@@ -17,7 +17,8 @@ Commands:
 A pull request or issue the CI doctor opens carries the label `ci-doctor` and
 one line `CI-Doctor: <owner/repo> | <signature>` per cluster it tackles.
 `failures` marks a cluster with an open item as `tracked by`, so a second
-run of the doctor leaves it alone. Only that line and the title are read.
+run of the doctor leaves it alone, and a cluster whose jobs all passed on a
+later run as `passed since` (its excerpt is left out). Only that line and the title are read.
 
 Kinds: compile (rustc), test (nextest/cargo test), lint (fmt, clippy, deny),
 infra (runner, network, package install), skipped (the emulator tier did not
@@ -155,9 +156,13 @@ def collect(repo, workflow, branch, since, limit):
     runs = list_runs(repo, workflow, branch, since, limit)
     clusters = {}
     skipped_runs = []
+    passed = {}  # job name -> the latest run it succeeded in
     for run in runs:
         # A green run can still have skipped the emulator tier, so look at every run's jobs.
         jobs = run_jobs(repo, run["databaseId"])
+        for job in jobs:
+            if job["conclusion"] == "success":
+                passed[job["name"]] = max(passed.get(job["name"], ""), run["createdAt"])
         emu = [j for j in jobs if j["name"].startswith("emulator (oxrok")]
         if emu and all(j["conclusion"] == "skipped" for j in emu):
             skipped_runs.append(run["databaseId"])
@@ -188,6 +193,10 @@ def collect(repo, workflow, branch, since, limit):
         c["jobs"] = sorted(c["jobs"])
         c["count"] = len(c["runs"])
         c["on_latest_run"] = any(r["id"] == latest for r in c["runs"])
+        # Every job of the cluster has passed on a later run of the branch:
+        # history, not breakage (the same cases ran again and passed).
+        later = [passed.get(j, "") for j in c["jobs"]]
+        c["passed_since"] = min(later) if all(t > c["last_seen"] for t in later) else None
         c["runs"].sort(key=lambda r: r["created"], reverse=True)
         out.append(c)
     out.sort(key=lambda c: (not c["on_latest_run"], -c["count"], c["signature"]))
@@ -286,6 +295,8 @@ def cmd_failures(cfg, args):
             flags.append("known flake")
         if c["tracked_by"]:
             flags.append("tracked by " + ", ".join(c["tracked_by"]))
+        if c["passed_since"]:
+            flags.append("passed since " + c["passed_since"][:10])
         print("\n## %d. [%s] %s  (%d run%s, %s..%s)%s" % (
             n, c["kind"], c["job"], c["count"], "s" if c["count"] != 1 else "",
             c["first_seen"][:10], c["last_seen"][:10],
@@ -296,6 +307,9 @@ def cmd_failures(cfg, args):
             print("run %d %s %s %s" % (r["id"], r["created"][:16], r["sha"], r["title"]))
         if c["count"] > 5:
             print("... and %d more" % (c["count"] - 5))
+        if c["passed_since"]:
+            print("(excerpt left out: the job has passed since)")
+            continue
         print("```")
         for line in c["excerpt"]:
             print(line[:240])
