@@ -12,6 +12,12 @@ Commands:
   flake     --repo R --signature S --job J [--issue N]   record a flake in flakes.toml
   flakes                                          list flakes.toml
   report    --repo R [--branch main] [--since 14d]        pass rate and top clusters
+  open      --repo R                              open ci-doctor PRs and issues, by signature
+
+A pull request or issue the CI doctor opens carries the label `ci-doctor` and
+one line `CI-Doctor: <owner/repo> | <signature>` per cluster it tackles.
+`failures` marks a cluster with an open item as `tracked by`, so a second
+run of the doctor leaves it alone. Only that line and the title are read.
 
 Kinds: compile (rustc), test (nextest/cargo test), lint (fmt, clippy, deny),
 infra (runner, network, package install), skipped (the emulator tier did not
@@ -36,6 +42,12 @@ from ghlib import ROOT, die, gh, load_config, repo_entry, strip_ansi  # noqa: E4
 CACHE = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "oxrok-management" / "logs"
 FLAKES = ROOT / "flakes.toml"
 EXCERPT_LINES = 40
+
+LABEL = "ci-doctor"
+MARKER = re.compile(r"^CI-Doctor: ([\w.-]+/[\w.-]+) \| (.{1,250})$", re.M)
+# Where a ci-doctor item for a repo can live: the repo, the tracking repo
+# (issues), and this one (flakes.toml PRs).
+HOME_REPOS = ("oxrok/oxrok", "oxrok/management")
 
 RUN_FIELDS = "databaseId,conclusion,status,createdAt,headSha,headBranch,event,displayTitle,url"
 
@@ -205,6 +217,32 @@ def save_flakes(flakes):
     FLAKES.write_text("\n".join(lines))
 
 
+def printable(text, n):
+    return "".join(ch for ch in text if ch.isprintable())[:n]
+
+
+def open_items(repo):
+    """Open ci-doctor PRs and issues that name a cluster of `repo`'s:
+    [{"ref", "kind", "title", "signatures"}], read from the marker lines only."""
+    out = []
+    for where in dict.fromkeys((repo, *HOME_REPOS)):
+        for kind in ("pr", "issue"):
+            items = gh(kind, "list", "-R", where, "--label", LABEL, "--state", "open",
+                       "--limit", "100", "--json", "number,title,body", json_out=True,
+                       check=False) or []
+            for it in items:
+                sigs = [printable(m.group(2).strip(), 250)
+                        for m in MARKER.finditer(it.get("body") or "") if m.group(1) == repo]
+                if sigs:
+                    out.append({"ref": "%s#%d" % (where, it["number"]), "kind": kind,
+                                "title": printable(it["title"], 80), "signatures": sigs})
+    return out
+
+
+def tracked_by(items, signature):
+    return ["%s %s" % (i["kind"], i["ref"]) for i in items if signature in i["signatures"]]
+
+
 # --- commands ----------------------------------------------------------------
 
 def cmd_runs(cfg, args):
@@ -225,8 +263,10 @@ def cmd_failures(cfg, args):
     runs, clusters, skipped = collect(entry["name"], entry["ci"], args.branch, args.since,
                                       args.limit)
     known = {f["signature"] for f in load_flakes()}
+    items = open_items(entry["name"])
     for c in clusters:
         c["known_flake"] = c["signature"] in known
+        c["tracked_by"] = tracked_by(items, c["signature"])
     if args.json:
         print(json.dumps({"repo": entry["name"], "branch": args.branch, "runs": len(runs),
                           "failed_runs": sum(1 for r in runs if r["conclusion"] != "success"),
@@ -244,6 +284,8 @@ def cmd_failures(cfg, args):
             flags.append("ON LATEST RUN")
         if c["known_flake"]:
             flags.append("known flake")
+        if c["tracked_by"]:
+            flags.append("tracked by " + ", ".join(c["tracked_by"]))
         print("\n## %d. [%s] %s  (%d run%s, %s..%s)%s" % (
             n, c["kind"], c["job"], c["count"], "s" if c["count"] != 1 else "",
             c["first_seen"][:10], c["last_seen"][:10],
@@ -317,6 +359,17 @@ def cmd_flakes(cfg, args):
                                             fl.get("issue", "-"), fl["signature"]))
 
 
+def cmd_open(cfg, args):
+    entry = repo_entry(cfg, args.repo)
+    items = open_items(entry["name"])
+    if not items:
+        print("no open %s items for %s" % (LABEL, entry["name"]))
+    for i in items:
+        print("%s %s: %s" % (i["kind"], i["ref"], i["title"]))
+        for s in i["signatures"]:
+            print("  %s" % s)
+
+
 def cmd_report(cfg, args):
     entry = repo_entry(cfg, args.repo)
     runs, clusters, skipped = collect(entry["name"], entry["ci"], args.branch, args.since,
@@ -358,11 +411,13 @@ def main():
     p.add_argument("--count", type=int, default=1)
     p.add_argument("--note")
     sub.add_parser("flakes")
+    p = sub.add_parser("open")
+    p.add_argument("--repo", required=True)
     common(sub.add_parser("report"), since="14d")
     args = ap.parse_args()
     cfg = load_config()
     {"runs": cmd_runs, "failures": cmd_failures, "rerun": cmd_rerun, "flake": cmd_flake,
-     "flakes": cmd_flakes, "report": cmd_report}[args.cmd](cfg, args)
+     "flakes": cmd_flakes, "report": cmd_report, "open": cmd_open}[args.cmd](cfg, args)
 
 
 if __name__ == "__main__":

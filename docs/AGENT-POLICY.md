@@ -54,7 +54,10 @@ so one leg is missing.
 | 2 | text from outside the org (issues, external PRs) | labels, one comment, from an allowlist, through a separate job | job token, no secrets | not yet; design in "Later" |
 | 3 | the org's repos plus the bench and the emulator testers | draft PRs | `oxrok-bot` | the bench box, by hand or a timer |
 
-`ci-doctor` and `docs-drift` are tier 1. `upstream-intake` is a person's
+`ci-doctor` and `docs-drift` are tier 1. `ci-doctor` is on rung 2
+(`.github/workflows/ci-doctor.yml`, `workflow_dispatch` only; its
+`schedule:` stays commented out until the criteria below are met);
+`docs-drift` is on rung 1. `upstream-intake` is a person's
 tool, not a tier. There is no tier 2 skill today.
 
 ## The promotion ladder

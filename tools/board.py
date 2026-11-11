@@ -7,8 +7,9 @@ Commands:
   list [--status S]          the items
 
 Fields: Status (Todo, In progress, Done), Area (config.toml `areas`), Target repo
-(the [[repo]] short names). Labels in every repo: `maintenance` and
-`area:<x>`. Project #1, "Upstream intake", is track.py's and is not touched.
+(the [[repo]] short names). Labels in every repo: `maintenance`,
+`area:<x>`, and `ci-doctor` (what the CI doctor opened; tools/ci.py `open`).
+Project #1, "Upstream intake", is track.py's and is not touched.
 """
 
 import argparse
@@ -57,6 +58,8 @@ def cmd_setup(cfg, args):
         for area in cfg["areas"]:
             gh("label", "create", "area:" + area, "-R", r["name"], "--force",
                "--color", "bfdadc", "--description", "Maintenance area: " + area)
+        gh("label", "create", "ci-doctor", "-R", r["name"], "--force", "--color", "f9d0c4",
+           "--description", "Opened by the CI doctor; its CI-Doctor: lines name the failures")
     proj = Project(owner, number)
     if proj.ensure_select_field("Area", cfg["areas"]):
         print("created field Area")

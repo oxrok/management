@@ -1,0 +1,143 @@
+name: ci-doctor
+
+# The CI doctor (.claude/skills/ci-doctor) on a GitHub runner: rung 2 of
+# docs/AGENT-POLICY.md's promotion ladder, started by hand from the Actions
+# tab. Two jobs, so no job holds an agent and a write credential at once:
+#
+# - doctor: Claude runs the skill with a read-only GitHub token. It reads
+#   ci.py's digest, fixes in a checkout of the repo, runs the failed gate,
+#   and records what it would open with tools/plan.py: an artifact.
+# - apply: no agent. Checks the plan again (no workflow or ruleset paths,
+#   agent/ci-* branches, sizes, nothing already tracked by an open
+#   ci-doctor item) and opens draft PRs and issues as oxrok-bot.
+#
+# Secrets: CLAUDE_CODE_OAUTH_TOKEN (doctor), OXROK_BOT_APP_ID and
+# OXROK_BOT_PRIVATE_KEY (apply), CI_DOCTOR_READ_TOKEN (doctor, optional: a
+# fine-grained token with read-only Actions, Contents, Issues and Pull
+# requests on the org's repos, for reading other repos' job logs).
+
+on:
+  workflow_dispatch:
+    inputs:
+      repo:
+        description: Repository whose main-branch CI to diagnose
+        type: choice
+        options: [oxrok, oxrok-ui, oxrok-website, vusb, management]
+        default: oxrok
+      since:
+        description: How far back to look (24h, 7d)
+        default: 7d
+  # Rung 3, once the skill meets docs/AGENT-POLICY.md's criteria for it:
+  # schedule:
+  #   - cron: "17 6 * * *"
+
+permissions: {}
+
+concurrency:
+  group: ci-doctor
+  cancel-in-progress: false
+
+env:
+  REPO: ${{ inputs.repo || 'oxrok' }}
+  SINCE: ${{ inputs.since || '7d' }}
+
+jobs:
+  doctor:
+    name: doctor
+    # Only main's skill and tools; a branch could carry other instructions.
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    permissions:
+      contents: read
+    env:
+      OXROK_CHECKOUTS: checkouts
+      CI_DOCTOR_PLAN: ${{ github.workspace }}/../ci-doctor-plan
+      GH_TOKEN: ${{ secrets.CI_DOCTOR_READ_TOKEN || github.token }}
+    steps:
+      - name: Check the inputs
+        run: |
+          [[ "$SINCE" =~ ^[0-9]{1,3}[hd]$ ]] || { echo "since: e.g. 24h or 7d"; exit 1; }
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        if: env.REPO != 'management'
+        with:
+          repository: oxrok/${{ env.REPO }}
+          path: checkouts/${{ env.REPO }}
+          persist-credentials: false
+      - uses: dtolnay/rust-toolchain@683b588c487a69d01f6c6ddf40f036ff682cc2c8 # master
+        if: env.REPO == 'oxrok' || env.REPO == 'oxrok-ui' || env.REPO == 'vusb'
+        with:
+          toolchain: stable
+          components: rustfmt, clippy
+      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+        with:
+          tool: nextest
+        if: env.REPO == 'oxrok'
+      - name: Commit identity for the agent's fix
+        run: |
+          git config --global user.name "oxrok CI doctor"
+          git config --global user.email "oxrok-bot[bot]@users.noreply.github.com"
+          mkdir -p "$CI_DOCTOR_PLAN"
+          echo '[]' > "$CI_DOCTOR_PLAN/plan.json"
+      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # The job's own token, contents: read; no Claude GitHub App needed.
+          github_token: ${{ github.token }}
+          allowed_bots: ""
+          prompt: |
+            /ci-doctor
+            You are running in the ci-doctor workflow: follow the skill's
+            "In the workflow" section. Repository: ${{ env.REPO }}; since: ${{ env.SINCE }}.
+          claude_args: |
+            --max-turns 120
+            --disallowedTools WebFetch,WebSearch
+            --allowedTools Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(git -C checkouts/:*),Bash(git worktree:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git log:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(cd checkouts/:*)
+      - name: The plan
+        if: always()
+        run: python3 -I tools/plan.py show | tee -a "$GITHUB_STEP_SUMMARY"
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        if: always()
+        with:
+          name: ci-doctor-plan
+          path: ${{ env.CI_DOCTOR_PLAN }}
+          if-no-files-found: ignore
+          retention-days: 14
+
+  apply:
+    name: apply
+    needs: doctor
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093 # v4.3.0
+        with:
+          name: ci-doctor-plan
+          path: ${{ runner.temp }}/plan
+      - name: Bot credentials
+        env:
+          APP_ID: ${{ secrets.OXROK_BOT_APP_ID }}
+          KEY: ${{ secrets.OXROK_BOT_PRIVATE_KEY }}
+        run: |
+          sudo apt-get install -y -qq python3-cryptography >/dev/null
+          d="$RUNNER_TEMP/oxrok-bot"
+          install -d -m 700 "$d"
+          printf '%s\n' "$APP_ID" > "$d/app-id"
+          (umask 077; printf '%s\n' "$KEY" > "$d/key.pem")
+      - name: Open what the doctor planned
+        env:
+          OXROK_BOT_DIR: ${{ runner.temp }}/oxrok-bot
+        run: python3 -I tools/plan.py apply "$RUNNER_TEMP/plan" | tee -a "$GITHUB_STEP_SUMMARY"
+      - name: Forget the key
+        if: always()
+        run: rm -rf "$RUNNER_TEMP/oxrok-bot"
