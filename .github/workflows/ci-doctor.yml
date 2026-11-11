@@ -52,7 +52,6 @@ jobs:
       contents: read
     env:
       OXROK_CHECKOUTS: checkouts
-      CI_DOCTOR_PLAN: ${{ github.workspace }}/../ci-doctor-plan
       GH_TOKEN: ${{ secrets.CI_DOCTOR_READ_TOKEN || github.token }}
     steps:
       - name: Check the inputs
@@ -80,22 +79,39 @@ jobs:
         run: |
           git config --global user.name "oxrok CI doctor"
           git config --global user.email "oxrok-bot[bot]@users.noreply.github.com"
-          mkdir -p "$CI_DOCTOR_PLAN"
-          echo '[]' > "$CI_DOCTOR_PLAN/plan.json"
-      - uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
+      - name: An empty plan
+        # Outside the checkout, and a path upload-artifact takes (no "..").
+        run: |
+          plan="$RUNNER_TEMP/ci-doctor-plan"
+          mkdir -p "$plan"
+          echo '[]' > "$plan/plan.json"
+          echo "CI_DOCTOR_PLAN=$plan" >> "$GITHUB_ENV"
+      - id: claude
+        uses: anthropics/claude-code-action@4fa93a88de49bbef68b10eb15aabedf28ca0e1ed # v1.0.271
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
           # The job's own token, contents: read; no Claude GitHub App needed.
           github_token: ${{ github.token }}
           allowed_bots: ""
           prompt: |
-            /ci-doctor
-            You are running in the ci-doctor workflow: follow the skill's
-            "In the workflow" section. Repository: ${{ env.REPO }}; since: ${{ env.SINCE }}.
+            Run the CI doctor: the ci-doctor skill, .claude/skills/ci-doctor/SKILL.md
+            (read it if the skill does not load). You are running in the ci-doctor
+            workflow: follow its "In the workflow" section.
+            Repository: ${{ env.REPO }}; since: ${{ env.SINCE }}.
           claude_args: |
             --max-turns 120
             --disallowedTools WebFetch,WebSearch
-            --allowedTools Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(git -C checkouts/:*),Bash(git worktree:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git log:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(cd checkouts/:*)
+            --allowedTools Skill(ci-doctor),Read,Edit,Write,Glob,Grep,Bash(python3 tools/ci.py failures:*),Bash(python3 tools/ci.py open:*),Bash(python3 tools/ci.py flakes:*),Bash(python3 checkouts/:*),Bash(python3 tools/plan.py:*),Bash(git -C checkouts/:*),Bash(git worktree:*),Bash(git status:*),Bash(git diff:*),Bash(git add:*),Bash(git commit:*),Bash(git log:*),Bash(cargo fmt:*),Bash(cargo clippy:*),Bash(cargo nextest run:*),Bash(cargo test:*),Bash(make check:*),Bash(make test:*),Bash(cd checkouts/:*)
+      - name: Tool calls refused
+        # Names and the start of the input only; the full output stays off
+        # (show_full_output can carry secrets).
+        if: always() && steps.claude.outputs.execution_file != ''
+        env:
+          EXEC: ${{ steps.claude.outputs.execution_file }}
+        run: |
+          jq -r '[.[] | select(.type == "result")][-1].permission_denials // []
+                 | .[] | "\(.tool_name): \(.tool_input | tostring | .[0:200])"' "$EXEC" \
+            | tee -a "$GITHUB_STEP_SUMMARY"
       - name: The plan
         if: always()
         run: python3 -I tools/plan.py show | tee -a "$GITHUB_STEP_SUMMARY"
