@@ -126,6 +126,12 @@ decide and why. Do not paste logs into the report; the digest is enough.
 `.github/workflows/ci-doctor.yml` runs this skill on a GitHub runner. You
 are there when the prompt says so. The procedure is the same, except:
 
+- The digest is made before you start, by the workflow:
+  `checkouts/ci-doctor-digest.md` is step 1's output. Read it; do not run
+  `ci.py failures` again.
+- The session ends when you stop. Run every command in the foreground
+  and wait for it (cargo may take many minutes; the timeout allows it).
+  Never put one in the background or wait for a notification: none comes.
 - The repo is the one the prompt names, checked out at
   `checkouts/<short name>` (`checkouts/oxrok`). Put worktrees under
   `checkouts/` too: `git -C checkouts/oxrok worktree add -b agent/ci-<slug>
