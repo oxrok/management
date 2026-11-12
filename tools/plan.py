@@ -167,16 +167,25 @@ def footer(repo, signatures):
     return "\n".join(lines) + "\n"
 
 
-def tool(*args, check=True):
+def tool(*args, check=True, env=None):
     r = subprocess.run([sys.executable, "-I", str(ROOT / "tools" / args[0]), *args[1:]],
-                       capture_output=True, text=True)
+                       capture_output=True, text=True,
+                       env=dict(os.environ, **env) if env else None)
     if r.returncode != 0 and check:
         die("%s failed:\n%s" % (" ".join(args[:2]), r.stderr.strip()))
     return r
 
 
 def board_add(url):
-    r = tool("board.py", "add", url, "--area", "ci", check=False)
+    """As the bot: the job's own token cannot write an org project."""
+    try:
+        import bot  # here, not at the top: it needs the bot's key and `cryptography`
+
+        env = bot.bot_env()
+    except (ImportError, SystemExit):
+        print("  warning: not added to the board: no bot token")
+        return
+    r = tool("board.py", "add", url, "--area", "ci", check=False, env=env)
     if r.returncode != 0:
         print("  warning: not added to the board: %s" % r.stderr.strip().splitlines()[-1:])
 
