@@ -148,8 +148,12 @@ def normalize(line):
 
 
 def job_key(name):
-    """A job name with its matrix slice folded, so shards cluster together."""
-    return re.sub(r"\b\d+/\d+\b", "i/n", name)
+    """A job name with its matrix slice folded, so shards cluster together.
+
+    `python 2/3` is a slice of n; `the goldens, 5)` is the emulator's shard
+    number, whose models change from one pull request to the next."""
+    name = re.sub(r"\b\d+/\d+\b", "i/n", name)
+    return re.sub(r", \d+\)$", ", i)", name)
 
 
 def collect(repo, workflow, branch, since, limit):
@@ -248,8 +252,16 @@ def open_items(repo):
     return out
 
 
+def fold(signature):
+    """A signature with its job folded as job_key does, so items filed before
+    a change to the folding still match."""
+    job, sep, rest = signature.partition(" | ")
+    return job_key(job) + sep + rest
+
+
 def tracked_by(items, signature):
-    return ["%s %s" % (i["kind"], i["ref"]) for i in items if signature in i["signatures"]]
+    return ["%s %s" % (i["kind"], i["ref"]) for i in items
+            if fold(signature) in {fold(s) for s in i["signatures"]}]
 
 
 # --- commands ----------------------------------------------------------------
@@ -271,7 +283,7 @@ def cmd_failures(cfg, args):
     entry = repo_entry(cfg, args.repo)
     runs, clusters, skipped = collect(entry["name"], entry["ci"], args.branch, args.since,
                                       args.limit)
-    known = {f["signature"] for f in load_flakes()}
+    known = {fold(f["signature"]) for f in load_flakes()}
     items = open_items(entry["name"])
     for c in clusters:
         c["known_flake"] = c["signature"] in known
