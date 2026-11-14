@@ -9,3 +9,12 @@ last_seen = "2026-11-09"
 count = 1
 issue = 77
 note = "unplug lands before the transfer that reports it; pacing of the case, not the driver"
+
+[[flake]]
+signature = "emulator (oxrok against the goldens, i) | FAIL get limit_samples: could not put the tty back"
+job = "emulator (oxrok against the goldens, i)"
+first_seen = "2026-11-14"
+last_seen = "2026-11-14"
+count = 2
+issue = 105
+note = "harness: the tty restore before a case found no node; passed on rerun (runs 43022797274, 43172572311)"
