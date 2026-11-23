@@ -71,7 +71,7 @@ jobs:
         with:
           toolchain: stable
           components: rustfmt, clippy
-      - uses: taiki-e/install-action@cfdb7ed4ccc7c7dce37759eae89dc5674b469b39 # v2.90.3
+      - uses: taiki-e/install-action@75a7c0f87bd666af3cdb75c5b9e9d03ab6044e6f # v2.90.6
         with:
           tool: nextest
         if: env.REPO == 'oxrok'
@@ -95,7 +95,7 @@ jobs:
           python3 -I tools/ci.py failures --repo "$REPO" --since "$SINCE" > checkouts/ci-doctor-digest.md
           grep -E '^(# |## |Emulator tier skipped)' checkouts/ci-doctor-digest.md | tee -a "$GITHUB_STEP_SUMMARY"
       - id: claude
-        uses: anthropics/claude-code-action@4d75e5f390ee76b2e09c1980ecc99ff3a2e088c8 # v1.0.275
+        uses: anthropics/claude-code-action@c84e279f859e2591391e95bd309286eb111c345f # v1.0.284
         env:
           # cargo clippy or nextest on oxrok takes minutes; let it finish in
           # the foreground.
